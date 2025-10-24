@@ -190,6 +190,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		apiConfiguration: {},
 		version: "",
 		clineMessages: [],
+		taskTabs: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
 		allowedCommands: [],
