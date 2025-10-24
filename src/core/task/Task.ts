@@ -995,6 +995,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	public async beginTask(text: string, images?: string[]): Promise<void> {
+		if (this.isInitialized) {
+			await this.submitUserMessage(text, images)
+			return
+		}
+
+		this.metadata.task = text
+		await this.startTask(text, images)
+	}
+
 	async handleTerminalOperation(terminalOperation: "continue" | "abort") {
 		if (terminalOperation === "continue") {
 			this.terminalProcess?.continue()

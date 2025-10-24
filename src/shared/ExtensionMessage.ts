@@ -14,6 +14,7 @@ import type {
 	OrganizationAllowList,
 	ShareVisibility,
 	QueuedMessage,
+	TaskStatus,
 } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
@@ -35,6 +36,14 @@ export interface Command {
 export interface MarketplaceInstalledMetadata {
 	project: Record<string, { type: string }>
 	global: Record<string, { type: string }>
+}
+
+export interface TaskTabState {
+	id: string
+	label: string
+	status: TaskStatus
+	isActive: boolean
+	parentTaskId?: string
 }
 
 // Indexing status types
@@ -352,6 +361,7 @@ export type ExtensionState = Pick<
 	openRouterImageApiKey?: string
 	openRouterUseMiddleOutTransform?: boolean
 	messageQueue?: QueuedMessage[]
+	taskTabs?: TaskTabState[]
 	lastShownAnnouncementId?: string
 	apiModelId?: string
 	mcpServers?: McpServer[]

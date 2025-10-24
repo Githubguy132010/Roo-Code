@@ -21,6 +21,7 @@ import {
 	type DynamicAppProperties,
 	type CloudAppProperties,
 	type TaskProperties,
+	TaskStatus,
 	type GitProperties,
 	type TelemetryProperties,
 	type TelemetryPropertiesProvider,
@@ -50,7 +51,12 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
+import type {
+	ExtensionMessage,
+	ExtensionState,
+	MarketplaceInstalledMetadata,
+	TaskTabState,
+} from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
@@ -467,6 +473,8 @@ export class ClineProvider
 			// garbage collected.
 			task = undefined
 		}
+
+		await this.postStateToWebview()
 	}
 
 	getTaskStackSize(): number {
@@ -475,6 +483,31 @@ export class ClineProvider
 
 	public getCurrentTaskStack(): string[] {
 		return this.clineStack.map((cline) => cline.taskId)
+	}
+
+	private getTaskTabLabel(task: Task): string {
+		const rawLabel = typeof task.metadata?.task === "string" ? task.metadata.task.trim() : ""
+
+		if (rawLabel.length > 0) {
+			const MAX_LABEL_LENGTH = 60
+			if (rawLabel.length > MAX_LABEL_LENGTH) {
+				return `${rawLabel.slice(0, MAX_LABEL_LENGTH - 1).trimEnd()}…`
+			}
+
+			return rawLabel
+		}
+
+		return t("chat:startNewTask.title")
+	}
+
+	private getTaskTabsState(): TaskTabState[] {
+		return this.clineStack.map((task, index) => ({
+			id: task.taskId,
+			label: this.getTaskTabLabel(task),
+			status: task.isInitialized ? task.taskStatus : TaskStatus.None,
+			isActive: index === this.clineStack.length - 1,
+			parentTaskId: task.parentTaskId,
+		}))
 	}
 
 	// Remove the current task/cline instance (at the top of the stack), so this
@@ -1865,6 +1898,7 @@ export class ClineProvider
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
+			taskTabs: this.getTaskTabsState(),
 			taskHistory: (taskHistory || [])
 				.filter((item: HistoryItem) => item.ts && item.task)
 				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
@@ -2654,6 +2688,61 @@ export class ClineProvider
 			const task = this.clineStack[this.clineStack.length - 1]
 			console.log(`[clearTask] clearing task ${task.taskId}.${task.instanceId}`)
 			await this.removeClineFromStack()
+		}
+	}
+
+	public async closeTaskTab(taskId: string): Promise<void> {
+		const index = this.clineStack.findIndex((task) => task.taskId === taskId)
+
+		if (index === -1) {
+			return
+		}
+
+		if (index === this.clineStack.length - 1) {
+			await this.removeClineFromStack()
+		} else {
+			const [task] = this.clineStack.splice(index, 1)
+
+			if (task) {
+				task.emit(RooCodeEventName.TaskUnfocused)
+
+				try {
+					await task.abortTask(true)
+				} catch (error) {
+					this.log(
+						`[closeTaskTab] abortTask() failed ${task.taskId}.${task.instanceId}: ${
+							error instanceof Error ? error.message : String(error)
+						}`,
+					)
+				}
+
+				const cleanupFunctions = this.taskEventListeners.get(task)
+
+				if (cleanupFunctions) {
+					cleanupFunctions.forEach((cleanup) => cleanup())
+					this.taskEventListeners.delete(task)
+				}
+			}
+		}
+
+		if (this.clineStack.length === 0) {
+			await this.postMessageToWebview({ type: "invoke", invoke: "newChat" })
+		}
+
+		await this.postStateToWebview()
+	}
+
+	public async startPendingTask(text: string, images?: string[]): Promise<void> {
+		const task = this.getCurrentTask()
+
+		if (!task) {
+			return
+		}
+
+		if (!task.isInitialized) {
+			await task.beginTask(text, images)
+		} else {
+			await task.submitUserMessage(text, images)
 		}
 	}
 

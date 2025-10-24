@@ -523,6 +523,28 @@ export const webviewMessageHandler = async (
 				)
 			}
 			break
+		case "createTaskTab":
+			try {
+				await provider.createTask(undefined, undefined, undefined, { startTask: false })
+				await provider.postMessageToWebview({
+					type: "invoke",
+					invoke: "newChat",
+				})
+				await provider.postStateToWebview()
+			} catch (error) {
+				vscode.window.showErrorMessage(
+					`Failed to create task: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+			break
+		case "closeTaskTab":
+			if (message.text) {
+				await provider.closeTaskTab(message.text)
+			}
+			break
+		case "startPendingTask":
+			await provider.startPendingTask(message.text ?? "", message.images)
+			break
 		case "customInstructions":
 			await provider.updateCustomInstructions(message.text)
 			break

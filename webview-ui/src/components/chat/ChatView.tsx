@@ -16,7 +16,7 @@ import type { ClineAsk, ClineMessage, McpServerUse } from "@roo-code/types"
 import { ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
 import { McpServer, McpTool } from "@roo/mcp"
 import { findLast } from "@roo/array"
-import { FollowUpData, SuggestionItem } from "@roo-code/types"
+import { FollowUpData, SuggestionItem, TaskStatus } from "@roo-code/types"
 import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { getApiMetrics } from "@roo/getApiMetrics"
@@ -58,6 +58,7 @@ import { QueuedMessages } from "./QueuedMessages"
 import DismissibleUpsell from "../common/DismissibleUpsell"
 import { useCloudUpsell } from "@src/hooks/useCloudUpsell"
 import { Cloud } from "lucide-react"
+import TaskTabsBar from "./TaskTabsBar"
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -90,6 +91,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const {
 		clineMessages: messages,
+		taskTabs = [],
 		currentTaskItem,
 		currentTaskTodos,
 		taskHistory,
@@ -565,6 +567,24 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [])
 
+	const handleSelectTaskTab = useCallback((taskId: string) => {
+		if (!taskId) {
+			return
+		}
+		vscode.postMessage({ type: "showTaskWithId", text: taskId })
+	}, [])
+
+	const handleCloseTaskTab = useCallback((taskId: string) => {
+		if (!taskId) {
+			return
+		}
+		vscode.postMessage({ type: "closeTaskTab", text: taskId })
+	}, [])
+
+	const handleCreateTaskTab = useCallback(() => {
+		vscode.postMessage({ type: "createTaskTab" })
+	}, [])
+
 	const handleChatReset = useCallback(() => {
 		// Clear any pending auto-approval timeout
 		if (autoApproveTimeoutRef.current) {
@@ -614,7 +634,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				// Mark that user has responded - this prevents any pending auto-approvals.
 				userRespondedRef.current = true
 
-				if (messagesRef.current.length === 0) {
+				const activeTab = taskTabs.find((tab) => tab.isActive)
+
+				if (activeTab && activeTab.status === TaskStatus.None) {
+					vscode.postMessage({ type: "startPendingTask", text, images })
+				} else if (messagesRef.current.length === 0) {
 					vscode.postMessage({ type: "newTask", text, images })
 				} else if (clineAskRef.current) {
 					if (clineAskRef.current === "followup") {
@@ -652,7 +676,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handleChatReset()
 			}
 		},
-		[handleChatReset, markFollowUpAsAnswered, sendingDisabled], // messagesRef and clineAskRef are stable
+		[handleChatReset, markFollowUpAsAnswered, sendingDisabled, taskTabs], // messagesRef and clineAskRef are stable
 	)
 
 	const handleSetChatBoxMessage = useCallback(
@@ -855,6 +879,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	)
 
 	useEvent("message", handleMessage)
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "t") {
+				event.preventDefault()
+				handleCreateTaskTab()
+			}
+		}
+
+		window.addEventListener("keydown", handleKeyDown)
+		return () => window.removeEventListener("keydown", handleKeyDown)
+	}, [handleCreateTaskTab])
 
 	// NOTE: the VSCode window needs to be focused for this to work.
 	useMount(() => textAreaRef.current?.focus())
@@ -1783,6 +1819,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}}
 				/>
 			)}
+			<TaskTabsBar
+				tabs={taskTabs}
+				onSelect={handleSelectTaskTab}
+				onClose={handleCloseTaskTab}
+				onCreate={handleCreateTaskTab}
+				newTabLabel={t("chat:startNewTask.title")}
+			/>
 			{task ? (
 				<>
 					<TaskHeader
