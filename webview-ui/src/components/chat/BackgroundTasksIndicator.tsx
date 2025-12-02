@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Layers, Play, Pause, Loader2 } from "lucide-react"
 
@@ -31,22 +31,28 @@ const getStatusIcon = (status: TaskStatus) => {
 	}
 }
 
-const getStatusLabel = (status: TaskStatus) => {
-	switch (status) {
-		case TaskStatus.Running:
-			return "Running"
-		case TaskStatus.Interactive:
-			return "Waiting"
-		case TaskStatus.Background:
-			return "Background"
-		default:
-			return "Paused"
-	}
-}
-
 export const BackgroundTasksIndicator = memo(({ className }: BackgroundTasksIndicatorProps) => {
 	const { t } = useTranslation()
-	const { backgroundTasks, bringTaskToForeground, sendTaskToBackground, currentTaskItem } = useExtensionState()
+	const { backgroundTasks, bringTaskToForeground, sendTaskToBackground, clineMessages } = useExtensionState()
+
+	// Check if there's an active task by checking if there are clineMessages
+	const hasActiveTask = useMemo(() => clineMessages && clineMessages.length > 0, [clineMessages])
+
+	const getStatusLabel = useMemo(
+		() => (status: TaskStatus) => {
+			switch (status) {
+				case TaskStatus.Running:
+					return t("chat:backgroundTasks.running")
+				case TaskStatus.Interactive:
+					return t("chat:backgroundTasks.waiting")
+				case TaskStatus.Background:
+					return t("chat:backgroundTasks.running")
+				default:
+					return t("chat:backgroundTasks.paused")
+			}
+		},
+		[t],
+	)
 
 	// Only show if there are background tasks
 	if (!backgroundTasks || backgroundTasks.length === 0) {
@@ -69,7 +75,7 @@ export const BackgroundTasksIndicator = memo(({ className }: BackgroundTasksIndi
 						)}>
 						<Layers className="size-4" />
 						<span className="text-xs font-medium">{backgroundTasks.length}</span>
-						{backgroundTasks.some((t) => t.status === TaskStatus.Running) && (
+						{backgroundTasks.some((task) => task.status === TaskStatus.Running) && (
 							<span className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
 						)}
 					</Button>
@@ -93,7 +99,7 @@ export const BackgroundTasksIndicator = memo(({ className }: BackgroundTasksIndi
 						</div>
 					</DropdownMenuItem>
 				))}
-				{currentTaskItem && (
+				{hasActiveTask && (
 					<>
 						<div className="border-t border-vscode-panel-border my-1" />
 						<DropdownMenuItem
