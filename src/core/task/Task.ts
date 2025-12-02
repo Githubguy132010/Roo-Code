@@ -225,6 +225,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	idleAsk?: ClineMessage
 	resumableAsk?: ClineMessage
 	interactiveAsk?: ClineMessage
+	isBackground: boolean = false
 
 	didFinishAbortingStream = false
 	abandoned = false
@@ -657,6 +658,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			throw new Error("Task mode accessed before initialization. Use getTaskMode() or wait for taskModeReady.")
 		}
 
+		return this._taskMode
+	}
+
+	/**
+	 * Get the task mode synchronously, returning undefined if not initialized yet.
+	 * This is safe to use when you don't want to wait for initialization or throw an error.
+	 *
+	 * @returns The task mode string or undefined if not initialized
+	 * @public
+	 */
+	public get taskModeOrUndefined(): string | undefined {
 		return this._taskMode
 	}
 
@@ -3903,6 +3915,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// Getters
 
 	public get taskStatus(): TaskStatus {
+		if (this.isBackground) {
+			return TaskStatus.Background
+		}
+
 		if (this.interactiveAsk) {
 			return TaskStatus.Interactive
 		}
@@ -3916,6 +3932,27 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		return TaskStatus.Running
+	}
+
+	/**
+	 * Send this task to background. The task will continue running but won't be
+	 * displayed in the main UI.
+	 */
+	public sendToBackground(): void {
+		if (!this.isBackground) {
+			this.isBackground = true
+			this.emit(RooCodeEventName.TaskBackground, this.taskId)
+		}
+	}
+
+	/**
+	 * Bring this task back to foreground.
+	 */
+	public bringToForeground(): void {
+		if (this.isBackground) {
+			this.isBackground = false
+			this.emit(RooCodeEventName.TaskForeground, this.taskId)
+		}
 	}
 
 	public get taskAsk(): ClineMessage | undefined {

@@ -51,7 +51,12 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
+import type {
+	ExtensionMessage,
+	ExtensionState,
+	MarketplaceInstalledMetadata,
+	BackgroundTaskInfo,
+} from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
@@ -132,6 +137,7 @@ export class ClineProvider
 	private webviewDisposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
+	private backgroundTasks: Task[] = [] // Tasks running in background
 	private codeIndexStatusSubscription?: vscode.Disposable
 	private codeIndexManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
@@ -482,6 +488,95 @@ export class ClineProvider
 
 	public getCurrentTaskStack(): string[] {
 		return this.clineStack.map((cline) => cline.taskId)
+	}
+
+	/**
+	 * Gets info about all background tasks for status display
+	 */
+	private getBackgroundTasksInfo(): BackgroundTaskInfo[] {
+		return this.backgroundTasks.map((task) => {
+			const tokenUsage = task.getTokenUsage()
+			return {
+				taskId: task.taskId,
+				task: task.metadata.task || "",
+				status: task.taskStatus,
+				tokensIn: tokenUsage.totalTokensIn,
+				tokensOut: tokenUsage.totalTokensOut,
+				totalCost: tokenUsage.totalCost,
+				ts: task.clineMessages[0]?.ts || Date.now(),
+				mode: task.taskModeOrUndefined,
+			}
+		})
+	}
+
+	/**
+	 * Sends the current task to background
+	 */
+	public async sendCurrentTaskToBackground(): Promise<void> {
+		const currentTask = this.getCurrentTask()
+		if (!currentTask) {
+			return
+		}
+
+		// Move task to background
+		currentTask.sendToBackground()
+
+		// Add to background tasks list
+		if (!this.backgroundTasks.includes(currentTask)) {
+			this.backgroundTasks.push(currentTask)
+		}
+
+		// Remove from main cline stack (keep only background reference)
+		const taskIndex = this.clineStack.indexOf(currentTask)
+		if (taskIndex !== -1) {
+			this.clineStack.splice(taskIndex, 1)
+		}
+
+		// Emit event
+		this.emit(RooCodeEventName.TaskBackground, currentTask.taskId)
+
+		// Update webview
+		await this.postStateToWebview()
+	}
+
+	/**
+	 * Brings a background task to foreground
+	 */
+	public async bringTaskToForeground(taskId: string): Promise<void> {
+		const taskIndex = this.backgroundTasks.findIndex((t) => t.taskId === taskId)
+		if (taskIndex === -1) {
+			return
+		}
+
+		const task = this.backgroundTasks[taskIndex]
+
+		// Send current task to background if exists
+		const currentTask = this.getCurrentTask()
+		if (currentTask && currentTask.taskId !== taskId) {
+			await this.sendCurrentTaskToBackground()
+		}
+
+		// Remove from background list
+		this.backgroundTasks.splice(taskIndex, 1)
+
+		// Add to main stack
+		this.clineStack.push(task)
+
+		// Bring to foreground
+		task.bringToForeground()
+
+		// Emit event
+		this.emit(RooCodeEventName.TaskForeground, task.taskId)
+
+		// Update webview
+		await this.postStateToWebview()
+	}
+
+	/**
+	 * Checks if there are any background tasks
+	 */
+	public hasBackgroundTasks(): boolean {
+		return this.backgroundTasks.length > 0
 	}
 
 	// Pending Edit Operations Management
@@ -2101,6 +2196,7 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			backgroundTasks: this.getBackgroundTasksInfo(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
 		}
 	}
@@ -2345,6 +2441,7 @@ export class ClineProvider
 					return false
 				}
 			})(),
+			backgroundTasks: this.getBackgroundTasksInfo(),
 		}
 	}
 

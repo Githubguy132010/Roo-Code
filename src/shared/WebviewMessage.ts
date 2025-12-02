@@ -51,6 +51,8 @@ export interface WebviewMessage {
 		| "showTaskWithId"
 		| "deleteTaskWithId"
 		| "exportTaskWithId"
+		| "sendTaskToBackground"
+		| "bringTaskToForeground"
 		| "importSettings"
 		| "exportSettings"
 		| "resetState"

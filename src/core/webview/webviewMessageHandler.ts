@@ -707,6 +707,12 @@ export const webviewMessageHandler = async (
 		case "showTaskWithId":
 			provider.showTaskWithId(message.text!)
 			break
+		case "sendTaskToBackground":
+			provider.sendCurrentTaskToBackground()
+			break
+		case "bringTaskToForeground":
+			provider.bringTaskToForeground(message.text!)
+			break
 		case "condenseTaskContextRequest":
 			provider.condenseTaskContext(message.text!)
 			break

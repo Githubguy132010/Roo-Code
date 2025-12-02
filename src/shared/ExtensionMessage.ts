@@ -14,6 +14,7 @@ import type {
 	OrganizationAllowList,
 	ShareVisibility,
 	QueuedMessage,
+	TaskStatus,
 } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
@@ -35,6 +36,18 @@ export interface Command {
 export interface MarketplaceInstalledMetadata {
 	project: Record<string, { type: string }>
 	global: Record<string, { type: string }>
+}
+
+// Background task information for status indicator
+export interface BackgroundTaskInfo {
+	taskId: string
+	task: string // Task description/prompt
+	status: TaskStatus
+	tokensIn: number
+	tokensOut: number
+	totalCost: number
+	ts: number // Timestamp when task started
+	mode?: string
 }
 
 // Indexing status types
@@ -338,6 +351,7 @@ export type ExtensionState = Pick<
 	organizationSettingsVersion?: number
 
 	isBrowserSessionActive: boolean // Actual browser session state
+	backgroundTasks: BackgroundTaskInfo[] // Tasks running in the background
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number

@@ -14,7 +14,13 @@ import {
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 } from "@roo-code/types"
 
-import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata, Command } from "@roo/ExtensionMessage"
+import {
+	ExtensionMessage,
+	ExtensionState,
+	MarketplaceInstalledMetadata,
+	Command,
+	BackgroundTaskInfo,
+} from "@roo/ExtensionMessage"
 import { findLastIndex } from "@roo/array"
 import { McpServer } from "@roo/mcp"
 import { checkExistKey } from "@roo/checkExistApiConfig"
@@ -59,6 +65,9 @@ export interface ExtensionStateContextType extends ExtensionState {
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	profileThresholds: Record<string, number>
 	setProfileThresholds: (value: Record<string, number>) => void
+	backgroundTasks: BackgroundTaskInfo[] // Background tasks for status indicator
+	sendTaskToBackground: () => void // Send current task to background
+	bringTaskToForeground: (taskId: string) => void // Bring task to foreground
 	setApiConfiguration: (config: ProviderSettings) => void
 	setCustomInstructions: (value?: string) => void
 	setAlwaysAllowReadOnly: (value: boolean) => void
@@ -277,6 +286,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		openRouterImageGenerationSelectedModel: "",
 		includeCurrentTime: true,
 		includeCurrentCost: true,
+		backgroundTasks: [], // Background tasks info
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -477,6 +487,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		remoteControlEnabled: state.remoteControlEnabled ?? false,
 		taskSyncEnabled: state.taskSyncEnabled,
 		featureRoomoteControlEnabled: state.featureRoomoteControlEnabled ?? false,
+		backgroundTasks: state.backgroundTasks ?? [],
+		sendTaskToBackground: () => vscode.postMessage({ type: "sendTaskToBackground" }),
+		bringTaskToForeground: (taskId: string) => vscode.postMessage({ type: "bringTaskToForeground", text: taskId }),
 		setExperimentEnabled: (id, enabled) =>
 			setState((prevState) => ({ ...prevState, experiments: { ...prevState.experiments, [id]: enabled } })),
 		setApiConfiguration,

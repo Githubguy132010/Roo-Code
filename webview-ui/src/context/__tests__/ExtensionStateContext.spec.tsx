@@ -216,6 +216,7 @@ describe("mergeExtensionState", () => {
 			featureRoomoteControlEnabled: false,
 			isBrowserSessionActive: false,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS, // Add the checkpoint timeout property
+			backgroundTasks: [], // Add background tasks
 		}
 
 		const prevState: ExtensionState = {

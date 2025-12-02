@@ -68,6 +68,8 @@ export type TaskProviderEvents = {
 	[RooCodeEventName.TaskInteractive]: [taskId: string]
 	[RooCodeEventName.TaskResumable]: [taskId: string]
 	[RooCodeEventName.TaskIdle]: [taskId: string]
+	[RooCodeEventName.TaskBackground]: [taskId: string]
+	[RooCodeEventName.TaskForeground]: [taskId: string]
 
 	[RooCodeEventName.TaskPaused]: [taskId: string]
 	[RooCodeEventName.TaskUnpaused]: [taskId: string]
@@ -104,6 +106,7 @@ export enum TaskStatus {
 	Interactive = "interactive",
 	Resumable = "resumable",
 	Idle = "idle",
+	Background = "background",
 	None = "none",
 }
 
@@ -145,6 +148,8 @@ export type TaskEvents = {
 	[RooCodeEventName.TaskInteractive]: [taskId: string]
 	[RooCodeEventName.TaskResumable]: [taskId: string]
 	[RooCodeEventName.TaskIdle]: [taskId: string]
+	[RooCodeEventName.TaskBackground]: [taskId: string]
+	[RooCodeEventName.TaskForeground]: [taskId: string]
 
 	// Subtask Lifecycle
 	[RooCodeEventName.TaskPaused]: [taskId: string]

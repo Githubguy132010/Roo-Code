@@ -425,5 +425,17 @@
 		"updated": "Updated the to-do list",
 		"completed": "Completed",
 		"started": "Started"
+	},
+	"backgroundTasks": {
+		"title": "Background Tasks",
+		"tooltip": "{{count}} tasks running in background",
+		"tooltip_one": "1 task running in background",
+		"tooltip_other": "{{count}} tasks running in background",
+		"untitled": "Untitled task",
+		"sendCurrent": "Send current task to background",
+		"bringToForeground": "Bring to foreground",
+		"running": "Running",
+		"waiting": "Waiting for input",
+		"paused": "Paused"
 	}
 }

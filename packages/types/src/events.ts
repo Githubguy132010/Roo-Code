@@ -21,6 +21,8 @@ export enum RooCodeEventName {
 	TaskInteractive = "taskInteractive",
 	TaskResumable = "taskResumable",
 	TaskIdle = "taskIdle",
+	TaskBackground = "taskBackground",
+	TaskForeground = "taskForeground",
 
 	// Subtask Lifecycle
 	TaskPaused = "taskPaused",
@@ -72,6 +74,8 @@ export const rooCodeEventsSchema = z.object({
 	[RooCodeEventName.TaskInteractive]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskResumable]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskIdle]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskBackground]: z.tuple([z.string()]),
+	[RooCodeEventName.TaskForeground]: z.tuple([z.string()]),
 
 	[RooCodeEventName.TaskPaused]: z.tuple([z.string()]),
 	[RooCodeEventName.TaskUnpaused]: z.tuple([z.string()]),
@@ -166,6 +170,16 @@ export const taskEventSchema = z.discriminatedUnion("eventName", [
 	z.object({
 		eventName: z.literal(RooCodeEventName.TaskIdle),
 		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskIdle],
+		taskId: z.number().optional(),
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskBackground),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskBackground],
+		taskId: z.number().optional(),
+	}),
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskForeground),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskForeground],
 		taskId: z.number().optional(),
 	}),
 

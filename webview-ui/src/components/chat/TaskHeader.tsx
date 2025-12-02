@@ -34,6 +34,7 @@ import { ContextWindowProgress } from "./ContextWindowProgress"
 import { Mention } from "./Mention"
 import { TodoListDisplay } from "./TodoListDisplay"
 import { LucideIconButton } from "./LucideIconButton"
+import { BackgroundTasksIndicator } from "./BackgroundTasksIndicator"
 
 export interface TaskHeaderProps {
 	task: ClineMessage
@@ -250,39 +251,44 @@ const TaskHeader = ({
 							</StandardTooltip>
 							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
 						</div>
-						{showBrowserGlobe && (
-							<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-								<StandardTooltip content={t("chat:browser.session")}>
-									<Button
-										variant="ghost"
-										size="sm"
-										aria-label={t("chat:browser.session")}
-										onClick={() => vscode.postMessage({ type: "openBrowserSessionPanel" } as any)}
-										className={cn(
-											"relative h-5 w-5 p-0",
-											"text-vscode-foreground opacity-85",
-											"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)]",
-											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-										)}>
-										<Globe
-											className="w-4 h-4"
-											style={{
-												color: isBrowserSessionActive
-													? "#4ade80"
-													: "var(--vscode-descriptionForeground)",
-											}}
-										/>
-									</Button>
-								</StandardTooltip>
-								{isBrowserSessionActive && (
-									<span
-										className="text-sm font-medium"
-										style={{ color: "var(--vscode-testing-iconPassed)" }}>
-										Active
-									</span>
-								)}
-							</div>
-						)}
+						<div className="flex items-center gap-2">
+							<BackgroundTasksIndicator />
+							{showBrowserGlobe && (
+								<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+									<StandardTooltip content={t("chat:browser.session")}>
+										<Button
+											variant="ghost"
+											size="sm"
+											aria-label={t("chat:browser.session")}
+											onClick={() =>
+												vscode.postMessage({ type: "openBrowserSessionPanel" } as any)
+											}
+											className={cn(
+												"relative h-5 w-5 p-0",
+												"text-vscode-foreground opacity-85",
+												"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)]",
+												"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+											)}>
+											<Globe
+												className="w-4 h-4"
+												style={{
+													color: isBrowserSessionActive
+														? "#4ade80"
+														: "var(--vscode-descriptionForeground)",
+												}}
+											/>
+										</Button>
+									</StandardTooltip>
+									{isBrowserSessionActive && (
+										<span
+											className="text-sm font-medium"
+											style={{ color: "var(--vscode-testing-iconPassed)" }}>
+											Active
+										</span>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}
