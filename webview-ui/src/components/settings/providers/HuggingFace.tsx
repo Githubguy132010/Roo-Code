@@ -256,7 +256,7 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 					{modelCapabilities.maxTokens && (
 						<div>
 							<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
-							{modelCapabilities.maxTokens.toLocaleString()} tokens
+							{modelCapabilities.maxTokens.toLocaleString("en-US")} tokens
 						</div>
 					)}
 					{currentProvider?.pricing && (
